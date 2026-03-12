@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Manga - Đăng nhập / Đăng ký</title>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;padding:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#f5f7fb;}
+  .card{width:360px;background:#fff;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);padding:24px;}
+  h2{text-align:center;margin:0 0 12px}
+  .field{margin-bottom:10px}
+  input{width:100%;padding:10px;border-radius:6px;border:1px solid #ddd;box-sizing:border-box}
+  button{width:100%;padding:10px;border:0;border-radius:6px;background:#2563eb;color:#fff;font-weight:600;cursor:pointer}
+  .link{margin-top:8px;text-align:center;color:#2563eb;cursor:pointer}
+  .msg{margin:8px 0;padding:8px;border-radius:6px;background:#eef2ff;color:#1e3a8a}
+  .error{background:#fff1f0;color:#7f1d1d}
+  small{color:#6b7280}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div id="login-view">
+      <h2>Đăng nhập</h2>
+      <div class="field"><input id="login-username" placeholder="Tên tài khoản"></div>
+      <div class="field"><input id="login-password" type="password" placeholder="Mật khẩu"></div>
+      <button id="btn-login">Đăng nhập</button>
+      <div class="link" id="to-register">Chưa có tài khoản? Đăng ký</div>
+      <div id="login-msg"></div>
+    </div>
+
+    <div id="register-view" style="display:none;">
+      <h2>Đăng ký</h2>
+      <div class="field"><input id="reg-username" placeholder="Tên tài khoản (username)"></div>
+      <div class="field"><input id="reg-display" placeholder="Tên hiển thị (ví dụ: Ken)"></div>
+      <div class="field"><input id="reg-email" placeholder="Email (dùng để lấy lại mật khẩu)"></div>
+      <div class="field"><input id="reg-password" type="password" placeholder="Mật khẩu (>=8, hoa, thường, ký tự # @ ₫ %)"></div>
+      <div class="field"><input id="reg-password2" type="password" placeholder="Nhập lại mật khẩu"></div>
+      <small> Mật khẩu phải ≥8 ký tự, có chữ hoa, chữ thường và ký tự đặc biệt (#,@,₫,%).</small>
+      <div style="height:8px"></div>
+      <button id="btn-register">Đăng ký</button>
+      <div class="link" id="to-login">Đã có tài khoản? Đăng nhập</div>
+      <div id="reg-msg"></div>
+    </div>
+  </div>
+
+<script>
+const API_BASE = ''; // nếu để '' nghĩa là cùng origin (tốt khi serve static trên server Node)
+
+const $ = id => document.getElementById(id);
+
+$('#to-register').onclick = ()=> { $('#login-view').style.display='none'; $('#register-view').style.display='block'; };
+$('#to-login').onclick = ()=> { $('#register-view').style.display='none'; $('#login-view').style.display='block'; };
+
+function showMsg(el, text, isError=false) {
+  el.innerHTML = `<div class="msg ${isError? 'error':''}">${text}</div>`;
+  setTimeout(()=> el.innerHTML = '', 3500);
+}
+
+function validPassword(pw){
+  if(pw.length < 8) return false;
+  if(!(/[a-z]/.test(pw))) return false;
+  if(!(/[A-Z]/.test(pw))) return false;
+  if(!(/[ #@₫%]/.test(pw))) return false;
+  return true;
+}
+
+/* Register */
+$('#btn-register').onclick = async ()=>{
+  const username = $('#reg-username').value.trim();
+  const display = $('#reg-display').value.trim();
+  const email = $('#reg-email').value.trim();
+  const pw = $('#reg-password').value;
+  const pw2 = $('#reg-password2').value;
+  const msgEl = $('#reg-msg');
+
+  if(!username || !display || !email || !pw || !pw2) { showMsg(msgEl, 'Điền đủ thông tin nhé', true); return; }
+  if(pw !== pw2) { showMsg(msgEl, 'Mật khẩu không khớp', true); return; }
+  if(!validPassword(pw)) { showMsg(msgEl, 'Mật khẩu không đạt yêu cầu', true); return; }
+
+  try {
+    const res = await fetch(API_BASE + '/register', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ username, display, email, password: pw })
+    });
+    const text = await res.text();
+    if(res.ok) {
+      showMsg(msgEl, 'Đăng ký thành công! Bạn có thể đăng nhập bây giờ.');
+      setTimeout(()=>{ $('#register-view').style.display='none'; $('#login-view').style.display='block'; }, 900);
+    } else {
+      showMsg(msgEl, text || 'Lỗi đăng ký', true);
+    }
+  } catch(e) {
+    showMsg(msgEl, 'Không thể kết nối server', true);
+    console.error(e);
+  }
+};
+
+/* Login */
+$('#btn-login').onclick = async ()=>{
+  const username = $('#login-username').value.trim();
+  const pw = $('#login-password').value;
+  const msgEl = $('#login-msg');
+  if(!username || !pw) { showMsg(msgEl, 'Điền đủ thông tin nhé', true); return; }
+
+  try {
+    const res = await fetch(API_BASE + '/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ username, password: pw })
+    });
+    if(res.ok) {
+      const json = await res.json();
+      showMsg(msgEl, 'Đăng nhập thành công — Chào ' + (json.display || json.username));
+    } else {
+      const txt = await res.text();
+      showMsg(msgEl, txt || 'Đăng nhập thất bại', true);
+    }
+  } catch(e) {
+    showMsg(msgEl, 'Không thể kết nối server', true);
+    console.error(e);
+  }
+};
+</script>
+</body>
+  </html>
