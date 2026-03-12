@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Manga - Đăng nhập / Đăng ký</title>
 <style>
-  body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;padding:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#f5f7fb;}
+  body{font-family:system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;padding:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#f5f7fb;}
   .card{width:360px;background:#fff;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);padding:24px;}
   h2{text-align:center;margin:0 0 12px}
   .field{margin-bottom:10px}
@@ -33,9 +33,9 @@
       <div class="field"><input id="reg-username" placeholder="Tên tài khoản (username)"></div>
       <div class="field"><input id="reg-display" placeholder="Tên hiển thị (ví dụ: Ken)"></div>
       <div class="field"><input id="reg-email" placeholder="Email (dùng để lấy lại mật khẩu)"></div>
-      <div class="field"><input id="reg-password" type="password" placeholder="Mật khẩu (>=8, hoa, thường, ký tự # @ ₫ %)"></div>
+      <div class="field"><input id="reg-password" type="password" placeholder="Mật khẩu (>=8, hoa, thường, ký tự đặc biệt # @ ₫ %)"></div>
       <div class="field"><input id="reg-password2" type="password" placeholder="Nhập lại mật khẩu"></div>
-      <small> Mật khẩu phải ≥8 ký tự, có chữ hoa, chữ thường và ký tự đặc biệt (#,@,₫,%).</small>
+      <small> Mật khẩu phải ≥8 ký tự, có chữ hoa, chữ thường và ký tự đặc biệt (#,@,₫,%)</small>
       <div style="height:8px"></div>
       <button id="btn-register">Đăng ký</button>
       <div class="link" id="to-login">Đã có tài khoản? Đăng nhập</div>
@@ -44,7 +44,11 @@
   </div>
 
 <script>
-const API_BASE = ''; // nếu để '' nghĩa là cùng origin (tốt khi serve static trên server Node)
+/* --- Cấu hình API --- 
+  Nếu bạn phục vụ index.html từ cùng server (node server.js), để API_BASE = '' (relative).
+  Nếu bạn host index.html trên GitHub Pages hoặc khác domain, set API_BASE = 'http://IP_CUA_BAN:3000' (hoặc ngrok URL).
+*/
+const API_BASE = ''; // ví dụ '' hoặc 'http://192.168.1.20:3000' hoặc 'https://abc123.ngrok.io'
 
 const $ = id => document.getElementById(id);
 
@@ -53,13 +57,15 @@ $('#to-login').onclick = ()=> { $('#register-view').style.display='none'; $('#lo
 
 function showMsg(el, text, isError=false) {
   el.innerHTML = `<div class="msg ${isError? 'error':''}">${text}</div>`;
-  setTimeout(()=> el.innerHTML = '', 3500);
+  setTimeout(()=> el.innerHTML = '', 4000);
 }
 
+/* password policy client-side */
 function validPassword(pw){
   if(pw.length < 8) return false;
   if(!(/[a-z]/.test(pw))) return false;
   if(!(/[A-Z]/.test(pw))) return false;
+  // special char one of # @ ₫ %
   if(!(/[ #@₫%]/.test(pw))) return false;
   return true;
 }
@@ -86,6 +92,7 @@ $('#btn-register').onclick = async ()=>{
     const text = await res.text();
     if(res.ok) {
       showMsg(msgEl, 'Đăng ký thành công! Bạn có thể đăng nhập bây giờ.');
+      // tự chuyển về login
       setTimeout(()=>{ $('#register-view').style.display='none'; $('#login-view').style.display='block'; }, 900);
     } else {
       showMsg(msgEl, text || 'Lỗi đăng ký', true);
@@ -109,12 +116,13 @@ $('#btn-login').onclick = async ()=>{
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ username, password: pw })
     });
+    const text = await res.text();
     if(res.ok) {
-      const json = await res.json();
-      showMsg(msgEl, 'Đăng nhập thành công — Chào ' + (json.display || json.username));
+      // Hiển thị "Đăng nhập thành công"
+      showMsg(msgEl, 'Đăng nhập thành công — Chào mừng ' + (await res.json()).display);
+      // ở đây bạn có thể redirect đến trang chính nếu muốn
     } else {
-      const txt = await res.text();
-      showMsg(msgEl, txt || 'Đăng nhập thất bại', true);
+      showMsg(msgEl, text || 'Đăng nhập thất bại', true);
     }
   } catch(e) {
     showMsg(msgEl, 'Không thể kết nối server', true);
@@ -123,4 +131,4 @@ $('#btn-login').onclick = async ()=>{
 };
 </script>
 </body>
-  </html>
+</html>
